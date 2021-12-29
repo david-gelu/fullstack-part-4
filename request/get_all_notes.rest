@@ -1,0 +1,16 @@
+GET http://localhost:5000/api/blogs
+
+###
+
+DELETE http://localhost:5000/api/blogs/61cc706d8d0d5e7164c45bb2
+
+###
+POST http://localhost:5000/api/blogs
+Content-Type: application/json
+
+{
+  "title": "My portfolio",
+  "author": "David Gelu",
+  "url": "https://davidgelu.netlify.com",
+  "likes": 10000
+}
