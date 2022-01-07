@@ -20,7 +20,12 @@ const blogSchema = new mongoose.Schema({
     type: Number,
     required: false
   },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
 })
+
 blogSchema.plugin(uniqueValidator)
 
 blogSchema.set('toJSON', {
