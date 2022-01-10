@@ -1,4 +1,5 @@
 const blogsRouter = require('express').Router()
+const jwt = require('jsonwebtoken')
 const Blog = require('../models/blog')
 const User = require('../models/user')
 
@@ -8,30 +9,35 @@ blogsRouter.get('/', async (request, response) => {
   response.json(blogs.map(note => note.toJSON()))
 })
 
-blogsRouter.post('/', async (request, response) => {
+blogsRouter.post('/', async (request, response, next) => {
   const body = request.body
 
   if (body.title === undefined) {
-    return response.status(400).json({ error: 'title is missing' })
+    return response.status(400).json({ error: 'title is missing' }).end()
   }
   if (body.author === undefined) {
-    return response.status(400).json({ error: 'author is missing' })
+    return response.status(400).json({ error: 'author is missing' }).end()
   }
 
-  const user = await User.findById(body.userId)
+  const decodedToken = jwt.verify(request.token, process.env.SECRET)
+  if (!decodedToken.id) {
+    return response.status(401).json({ error: 'token missing or invalid' })
+  }
+  const user = request.user
 
   const blog = new Blog({
     title: body.title,
     author: body.author,
     url: body.url,
     likes: body.likes,
-    user: user._id
+    user: user.id
   })
 
   const savedBlog = await blog.save()
-  user.blogs = user.blogs.concat(savedBlog._id)
+  savedBlog.populate('user', { username: 1, name: 1, id: 1 })
+  user.blogs = user.blogs.concat(savedBlog.id)
   await user.save()
-  response.json(savedBlog.toJSON())
+  response.json(savedBlog)
 })
 
 blogsRouter.get('/:id', async (request, response) => {
@@ -68,13 +74,18 @@ blogsRouter.put('/:id', async (request, response, next) => {
 
 blogsRouter.delete('/:id', async (request, response) => {
   const body = request.params
-  await Blog.findByIdAndRemove(body.id)
+  const user = request.user
+  const decodedToken = jwt.verify(request.token, process.env.SECRET)
+  if (!decodedToken.id) {
+    return response.status(401).json({ error: 'token missing or invalid' })
+  }
+  await Blog.findByIdAndRemove(body.id === user.id)
   response.status(200).end()
 })
 
-blogsRouter.get('/api/info', (request, response) => {
+blogsRouter.get('info', (request, response) => {
   response.send(`
-  <h2>Blog has info for ${Blog.length - 1} posts</h2>
+  <h2>Blog has info for ${request.length} posts</h2>
   <h3>${new Date()}<h3>
   `)
 })
